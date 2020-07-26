@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Serilog;
 
 namespace TeamAssistantService
 {
@@ -11,7 +9,27 @@ namespace TeamAssistantService
 	{
 		public static void Main(string[] args)
 		{
-			CreateHostBuilder(args).Build().Run();
+			Log.Logger = new LoggerConfiguration()
+				.MinimumLevel.Debug()
+				.MinimumLevel.Override("Microsoft", Serilog.Events.LogEventLevel.Warning)
+				.Enrich.FromLogContext()
+				.WriteTo.File(@"C:\temp\TeamAssistant\LogFile.txt")
+				.CreateLogger();
+			try
+			{
+				Log.Information("Starting up the service.");
+				CreateHostBuilder(args).Build().Run();
+				return;
+			}
+			catch (Exception ex)
+			{
+				Log.Fatal(ex, "There was a problem starting the services.");
+				return;
+			}
+			finally
+			{
+				Log.CloseAndFlush();
+			}
 		}
 
 		public static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -19,6 +37,7 @@ namespace TeamAssistantService
 				.ConfigureServices((hostContext, services) =>
 				{
 					services.AddHostedService<Worker>();
-				});
+				})
+			.UseSerilog();
 	}
 }
